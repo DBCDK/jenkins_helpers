@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import re
 import urllib.request
 
 class JenkinsAPI(object):
@@ -27,8 +28,9 @@ class JenkinsAPI(object):
             return False
 
     def create_jenkins_item(self, name, config_path):
-        url = "{}/createItem?name={}".format(self.base_url, name)
-        if not self.check_job_exists(name):
+        url_safe_name = re.sub("[/\s]", "__", name)
+        url = "{}/createItem?name={}".format(self.base_url, url_safe_name)
+        if not self.check_job_exists(url_safe_name):
             config = read_config(name, config_path)
             p = self.make_request(url, config)
             print("job for branch {} created".format(name))
