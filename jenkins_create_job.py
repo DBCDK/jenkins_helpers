@@ -2,8 +2,17 @@
 
 import argparse
 import base64
+import os
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import traceback
 import urllib.request
+
+class ProcessError(Exception):
+    pass
 
 class JenkinsAPI(object):
     def __init__(self, base_url, user, api_key):
@@ -47,6 +56,40 @@ class JenkinsAPI(object):
             print("job for branch {} deleted".format(name))
         except urllib.error.URLError as e:
             print("could not delete job {}: {}".format(name, str(e)))
+
+class GitHandler(object):
+    def __init__(self, repo_url):
+        self.repo_url = repo_url
+        self.tmp_dir = tempfile.mkdtemp()
+        self.remote_name = "origin"
+
+    def init_repo(self):
+        call_process(["git", "init", "--bare", self.tmp_dir])
+        os.chdir(self.tmp_dir)
+        call_process(["git", "remote", "add", self.remote_name,
+            self.repo_url])
+        call_process(["git", "fetch", "--depth", "1"])
+
+    def get_branches(self):
+        try:
+            self.init_repo()
+            branches = subprocess.check_output(["git", "branch", "-r",
+                "--list"])
+            branches = branches.decode("utf8").split()
+            branches = [b.lstrip(self.remote_name).strip("/") for b in branches]
+            return branches
+        except (UnicodeDecodeError, ProcessError) as e:
+            print("error getting branches for repo {}: {}".format(
+                self.repo_url, str(e)), file=sys.stderr)
+            traceback.print_exc()
+        finally:
+            shutil.rmtree(self.tmp_dir)
+
+def call_process(args, **kwargs):
+    try:
+        subprocess.check_call(args, **kwargs)
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        raise ProcessError("error calling {}".format(str(args))) from e
 
 def make_url_safe_name(name):
     return re.sub("[/\s]", "__", name)
