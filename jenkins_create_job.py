@@ -11,6 +11,7 @@ import sys
 import tempfile
 import traceback
 import urllib.request
+import xml.etree.ElementTree as ET
 
 class ProcessError(Exception):
     pass
@@ -71,6 +72,16 @@ class JenkinsAPI(object):
         except urllib.error.URLError as e:
             print("couldn't find branch jobs: {}".format(str(e)),
                 file=sys.stderr)
+
+    def get_jenkins_folder(self, folder):
+        url = "{}/api/xml?tree=jobs[url,name,jobs[fullName,url]]"\
+            "&xpath=hudson/job/name[text()='{}']/parent::*".format(
+            self.base_url, folder)
+        folder_xml = self.make_request(url)
+        root = ET.parse(folder_xml)
+        folder_url = root.findtext("url")
+        branches = [j.findtext("url") for j in root.findall("job")]
+        return (folder_url, branches)
 
 class GitHandler(object):
     def __init__(self, repo_url):
