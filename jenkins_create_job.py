@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import json
 import os
 import re
 import shutil
@@ -56,6 +57,20 @@ class JenkinsAPI(object):
             print("job for branch {} deleted".format(name))
         except urllib.error.URLError as e:
             print("could not delete job {}: {}".format(name, str(e)))
+
+    def get_branch_jobs(self, folder):
+        try:
+            js_response = self.make_request(
+                "{}/api/json?tree=jobs[name,jobs[url]]"
+                .format(self.base_url))
+            js = json.loads(js_response.read().decode("utf8"))
+            for job in js["jobs"]:
+                if job["_class"] == "com.cloudbees.hudson.plugins.folder.Folder"\
+                        and job["name"] == folder:
+                    return [j["url"] for j in job["jobs"]]
+        except urllib.error.URLError as e:
+            print("couldn't find branch jobs: {}".format(str(e)),
+                file=sys.stderr)
 
 class GitHandler(object):
     def __init__(self, repo_url):
