@@ -17,9 +17,10 @@ class ProcessError(Exception):
     pass
 
 class JenkinsAPI(object):
-    def __init__(self, base_url, user, api_key):
+    def __init__(self, base_url, folder, user, api_key):
         self.base_url = base_url
         self.auth = make_auth(user, api_key)
+        self.folder_url, self.branch_jobs = self.get_jenkins_folder(folder)
 
     def make_request(self, url, data=None, method=None):
         headers = {
@@ -42,7 +43,7 @@ class JenkinsAPI(object):
 
     def create_jenkins_item(self, name, config_path):
         url_safe_name = make_url_safe_name(name)
-        url = "{}/createItem?name={}".format(self.base_url, url_safe_name)
+        url = "{}/createItem?name={}".format(self.folder_url, url_safe_name)
         if not self.check_job_exists(url_safe_name):
             config = read_config(name, config_path)
             p = self.make_request(url, config)
@@ -123,11 +124,11 @@ def make_url_safe_name(name):
 def setup_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("branch", help="git feature branch to build")
+    parser.add_argument("folder", help="jenkins folder")
     parser.add_argument("-u", "--user", help="jenkins user")
     parser.add_argument("--api-key")
     parser.add_argument("--config", help="xml config to base job on")
     parser.add_argument("-s", "--server")
-    parser.add_argument("--folder", help="jenkins folder")
     args = parser.parse_args()
     return args
 
@@ -144,10 +145,8 @@ def make_auth(user, password):
 
 def main():
     args = setup_args()
-    base_url = args.server
-    if args.folder is not None:
-        base_url = "{}/job/{}".format(base_url, args.folder)
-    jenkins_api = JenkinsAPI(base_url, args.user, args.api_key)
+    jenkins_api = JenkinsAPI(args.server, args.folder, args.user,
+        args.api_key)
     jenkins_api.create_jenkins_item(args.branch, args.config)
 
 if __name__ == "__main__":
