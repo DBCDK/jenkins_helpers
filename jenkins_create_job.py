@@ -83,6 +83,18 @@ class JenkinsAPI(object):
         branches = [j.findtext("url") for j in root.findall("job")]
         return (folder_url, branches)
 
+    def get_branch_from_config(self, job_url):
+        config = self.make_request("{}/config.xml".format(job_url))
+        if config is not None:
+            root = ET.parse(config)
+            return root.findtext("scm/branches/"
+                "hudson.plugins.git.BranchSpec/name")
+
+    def find_deleted_branches(self, folder, remote_branches):
+        branch_jobs = self.get_branch_jobs(folder)
+        branches = set([self.get_branch_from_config(b) for b in branch_jobs])
+        return branches - set(remote_branches)
+
 class GitHandler(object):
     def __init__(self, repo_url):
         self.repo_url = repo_url
