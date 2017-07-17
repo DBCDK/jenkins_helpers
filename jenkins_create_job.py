@@ -35,7 +35,7 @@ class JenkinsAPI(object):
 
     def check_job_exists(self, job_name):
         try:
-            self.make_request("{}/job/{}/config.xml".format(self.base_url,
+            self.make_request("{}/job/{}/config.xml".format(self.folder_url,
                 job_name))
             return True
         except urllib.error.URLError:
@@ -51,11 +51,10 @@ class JenkinsAPI(object):
         else:
             print("job for branch {} already exists".format(name))
 
-    def delete_jenkins_item(self, name):
-        url_safe_name = make_url_safe_name(name)
+    def delete_jenkins_item(self, name, branch_job_url):
         try:
-            self.make_request("{}/job/{}/doDelete".format(self.base_url,
-                url_safe_name), method="POST")
+            self.make_request("{}/doDelete".format(branch_job_url),
+                method="POST")
             print("job for branch {} deleted".format(name))
         except urllib.error.URLError as e:
             print("could not delete job {}: {}".format(name, str(e)))
