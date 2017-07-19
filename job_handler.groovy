@@ -33,7 +33,7 @@ for(job in jobs) {
                     println("stopping " + build);
                     build.getExecutor().doStop();
                 } else {
-                    println(build + " has null executor");
+                    println(build.toString() + " has null executor");
                 }
             }
         }
